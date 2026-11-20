@@ -125,6 +125,20 @@ function cleanup(){timers.forEach(t=>{clearTimeout(t);clearInterval(t)});timers=
 let ac=null;
 function tone(f,d=.12,type='sine',v=.05){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(v,ac.currentTime);g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+d);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
 
+/* Chiptune "Happy Birthday" (square-wave lead, triangle bass) */
+let songNodes=[];
+function stopSong(){songNodes.forEach(o=>{try{o.stop()}catch(e){}});songNodes=[]}
+function chip(f,t,d,type,v){const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(v,t+.012);g.gain.setValueAtTime(v,t+d*.72);g.gain.linearRampToValueAtTime(.0001,t+d*.96);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+d);songNodes.push(o)}
+function song(){try{
+  ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();stopSong();
+  const N={G4:392,A4:440,B4:493.88,C5:523.25,D5:587.33,E5:659.25,F5:698.46,G5:783.99};
+  const mel=[['G4',.75],['G4',.25],['A4',1],['G4',1],['C5',1],['B4',2],['G4',.75],['G4',.25],['A4',1],['G4',1],['D5',1],['C5',2],['G4',.75],['G4',.25],['G5',1],['E5',1],['C5',1],['B4',1],['A4',1],['F5',.75],['F5',.25],['E5',1],['C5',1],['D5',1],['C5',3]];
+  const B=.42,t0=ac.currentTime+.08;let t=t0;
+  mel.forEach(([n,d])=>{chip(N[n],t,d*B,'square',.045);chip(N[n]*2,t,Math.min(d*B,.09),'square',.012);t+=d*B});
+  const bass=[130.81,196,196,130.81,130.81,174.61,130.81,130.81];
+  bass.forEach((f,i)=>{const s=t0+(1+i*3)*B;chip(f,s,(i===6?1.9:2.8)*B,'triangle',.09);if(i===6)chip(196,s+2*B,.9*B,'triangle',.09)});
+}catch(e){}}
+
 function setStep(n){
   if(n<0){stepsEl.hidden=true;return}
   stepsEl.hidden=false;
@@ -373,14 +387,14 @@ function approved(){
   <p class="kicker">Department of Birthdays</p><h1>Official Birthday Licence</h1>
   <p>This certifies that</p><div class="name">${NAME}</div>
   <p>has completed all verification and is hereby authorised to have a birthday, effective immediately.</p>
-  <ul><li>🎂 Cake: unlimited, calories void</li><li>🕯️ Wishes: one (1), non-transferable</li><li>🧾 Declared age: ${declaredAge||'classified'} (unverified)</li><li>🤖 Robot status: probably not</li><li>📅 Issued: ${today}</li></ul>
-  <p class="muted">Witnessed and countersigned by ${FROM}</p></div>
-  <div class="msg"><b>Happy Birthday, ${NAME}! 🎉</b><p>The paperwork is finally done, so go and enjoy your day. Wishing you a brilliant year ahead, with plenty of cake, laughter and good things.</p><div class="sig">With love from ${FROM} 💜</div></div>
-  <div class="row" style="justify-content:center"><button class="alt" id="print">Print licence</button><button class="alt" id="again">Start over</button></div>`);
+  <ul><li>🎂 Cake: unlimited, calories void</li><li>🕯️ Wishes: one (1), non-transferable</li><li>🧾 Declared age: ${declaredAge||'classified'} (unverified)</li><li>🤖 Robot status: probably not</li><li>📅 Issued: ${today}</li></ul></div>
+  <div class="msg"><b>Happy Birthday, ${NAME}! 🎉</b><p>The paperwork is finally done, so go and enjoy your day. Wishing you a brilliant year ahead, with plenty of cake, laughter and good things.</p><div class="sig">${FROM} are wishing you a very happy birthday.</div></div>
+  <div class="row" style="justify-content:center"><button id="song">🎵 Play the song again</button><button class="alt" id="print">Print licence</button><button class="alt" id="again">Start over</button></div>`);
   $('#print').onclick=()=>window.print();
-  $('#again').onclick=()=>{stopConfetti();intro()};
+  $('#song').onclick=song;
+  $('#again').onclick=()=>{stopSong();stopConfetti();intro()};
   later(()=>tone(120,.25,'square',.09),380);
-  [523,659,784,1047].forEach((f,i)=>later(()=>tone(f,.22,'triangle',.06),900+i*150));
+  later(song,950);
   confetti();
 }
 
